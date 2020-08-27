@@ -38,9 +38,9 @@
 %%
 %% Version number is added when author enters: version = {number}, only in `misc'
 %%
-%% Removed `format.doi output' in {article} because in 
-%% combination with { format.pid output } we could get double doi entries 
-%% in the bibliography. 
+%% Removed `format.doi output' in {article} because in
+%% combination with { format.pid output } we could get double doi entries
+%% in the bibliography.
 %%
 %% Rewrote format.pid so that we can check to see if we have a doi number; in
 %% which case we use that and suppress the arXiv and eprint combination. However,
@@ -53,7 +53,7 @@
 %% Changed bbl.version so that there is no longer a trailing `.'
 
 %% Revision 1.14 2016/9/14 Amy Hendrickson
-%% Added URL field 
+%% Added URL field
 
 %% Revision 1.13 2016/8/9 Amy Hendrickson
 %% Change to presort and bibsort to get multiple entries with same author/year
@@ -74,14 +74,14 @@
 %% access articles (no volume of page available, but online).
 %% Removed bibliography count from preamble since it seems to
 %% confuse some versions of latex.
-%% 
-%% Revision 1.9 2013/2/19 Erik Tollerud <erik.tollerud@yale.edu> 
+%%
+%% Revision 1.9 2013/2/19 Erik Tollerud <erik.tollerud@yale.edu>
 %% fixes for spurious error messages due to rev 1.8 changes
 %% also fixed missing publisher field printing in "book"
 %%
 %% Revision 1.8  2013/01/10 16:31:34  alberto
 %% Added proper formatting of arXiv eprint entries output by ADS
-%% (these are article records, but the eprint id is printed only 
+%% (these are article records, but the eprint id is printed only
 %% if no traditional page number is available).  Also added support
 %% for ASCL entries under the "misc" category.
 %%
@@ -123,7 +123,7 @@
 %% merlin.mbs  (with options: `,ay,nat,nm-rev,nmdash,dt-beg,yr-per,note-yr,atit-u,jtit-x,jttl-rm,thtit-a,vnum-x,volp-com,jpg-1,pp-last,btit-rm,add-pub,pub-par,pre-edn,edby,edbyx,blk-com,fin-bare,ppx,ed,abr,ord,jabr,amper,em-x')
 %% ----------------------------------------
 %% *** Bibliographic Style for ApJ ***
-%% 
+%%
  %-------------------------------------------------------------------
  % The original source file contains the following version information:
  % \ProvidesFile{merlin.mbs}[1998/02/25 3.85a (PWD)]
@@ -458,7 +458,7 @@ FUNCTION {format.names}
   #1 'nameptr :=
   s num.names$ 'numnames :=
   numnames 'namesleft :=
-  numnames #5 > 
+  numnames #5 >
     { #3 'numtrunc := }
     {}
   if$
@@ -468,8 +468,8 @@ FUNCTION {format.names}
     't :=
     nameptr #1 >
       {
-	nameptr #1 - numtrunc = 
-	  { 
+	nameptr #1 - numtrunc =
+	  {
 	    #1 'namesleft :=
 	    "others" 't :=
 	  }
@@ -479,7 +479,7 @@ FUNCTION {format.names}
         namesleft #1 >
           { ", " * t * }
           {
-            numnames #1 >
+            numnames #2 >
               { "," * }
               'skip$
             if$
@@ -702,7 +702,6 @@ FUNCTION {format.url}
 
 FUNCTION {format.eprint}
 { eprint empty$
-    { "" }
     { archivePrefix empty$
         { "" }
         { archivePrefix "arXiv" =
@@ -711,6 +710,7 @@ FUNCTION {format.eprint}
         if$}
       if$
     }
+    { "" }
   if$
 }
 
@@ -729,8 +729,8 @@ FUNCTION {format.doi}
 
 FUNCTION {format.pid}
 { doi empty$
-{eprint empty$ 
-     { url empty$ 
+{eprint empty$
+     { url empty$
        { "" }
        { format.url }
      if$}
@@ -739,6 +739,31 @@ FUNCTION {format.pid}
   { format.doi }
   if$
 }
+
+FUNCTION {format.archive.eprint}
+{ eprint empty$
+  archivePrefix empty$ or
+    { "" }
+    { archivePrefix ":" * eprint * }
+  if$
+}
+
+FUNCTION {format.eprint.yah}
+% Only print eprint info if no page info and no booktitle info --
+% what we're really going for is print the eprint info only if there's
+% no "official" reference info to work with.
+{ eprint empty$
+  archivePrefix empty$ or
+  doi empty$ not or
+    { "" }
+    { archivePrefix "arXiv" =
+        { "\href{http://arxiv.org/abs/" eprint * "}{" * format.archive.eprint * "}" * }
+        { format.archive.eprint }
+       if$
+     }
+  if$
+}
+
 
 FUNCTION {n.dashify}
 {
@@ -944,6 +969,7 @@ FUNCTION {first.page}
 
 FUNCTION {format.journal.pages}
 { pages empty$
+  pages format.archive.eprint = or
     'skip$
     { duplicate$ empty$
         { pop$ format.pages }
@@ -1156,7 +1182,7 @@ FUNCTION {format.full.book.spec} % The title should be on the stack.
 	    { " No." number tie.or.space.connect * }
 	    if$
 	}
-	{ series ", Vol." volume tie.or.space.connect *  
+	{ series ", Vol." volume tie.or.space.connect *
           ", " * swap$ format.ed.booktitle *
 	  number empty$
 	    'skip$
@@ -1170,6 +1196,34 @@ FUNCTION {format.full.book.spec} % The title should be on the stack.
 
 %%%%%%%  End of functions from astrobib
 
+FUNCTION {maybe.doi.link.prepend}
+{ % Expects some citation text to be on the stack
+ doi empty$
+  { url empty$
+     { }
+     { "\href{" url * "}{" * swap$ * }
+    if$
+  }
+  { "\href{http://dx.doi.org/" doi * "}{" * swap$ * }
+ if$
+}
+
+FUNCTION {maybe.doi.link.end}
+{ % Expects some citation text to be on the stack
+ doi empty$ url empty$ and
+  { }
+  { "}" * }
+ if$
+}
+
+FUNCTION {format.journal}
+{
+  journal "arXiv e-prints" =
+    { "" } % warning will be issued by output.check
+    { journal }
+  if$
+}
+
 FUNCTION {article}
 { output.bibitem
   format.authors "author" output.check
@@ -1178,19 +1232,21 @@ FUNCTION {article}
   format.date "year" output.check
   date.block
   crossref missing$
-    { journal
+    { format.journal
       "journal" output.check
+       maybe.doi.link.prepend
        format.vol.num.pages output
      }
-     { format.article.crossref output.nonnull
+     { format.article.crossref
+       maybe.doi.link.prepend
+       output.nonnull
        format.pages output
      }
   if$
-  pages empty$
-    'skip$
-    { format.journal.pages }
-  if$
-  format.pid output
+  format.journal.pages
+  maybe.doi.link.end
+  format.eprint.yah output
+  %format.pid output
   fin.entry
 }
 
