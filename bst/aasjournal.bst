@@ -702,6 +702,7 @@ FUNCTION {format.url}
 
 FUNCTION {format.eprint}
 { eprint empty$
+    { "" }
     { archivePrefix empty$
         { "" }
         { archivePrefix "arXiv" =
@@ -710,7 +711,6 @@ FUNCTION {format.eprint}
         if$}
       if$
     }
-    { "" }
   if$
 }
 
